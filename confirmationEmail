@@ -1,0 +1,138 @@
+function createCalendarEvent() {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetById(440155192); // Change if needed
+  if (!sheet) {
+    Logger.log("Error: Sheet not found!");
+    return;
+  }
+
+  var lastRow = sheet.getLastRow();
+  var rowData = sheet.getRange(lastRow, 1, 1, sheet.getLastColumn()).getValues()[0];
+
+  var eventTitle = rowData[1]; // Adjust column index based on your form structure
+  var rawDate = (rowData[2]); // Ensure the date format is correct
+  var rawStartTime = (rowData[3]); // Include time if applicable
+  var rawEndTime = (rowData[4]);
+  var location = rowData[5];
+  var organizerEmail = rowData[6]; // Email of the person who submitted the event
+  var description = rowData[7];
+  var mediaRequest = rowData[8]; // Yes or No Multiple Choice
+  var mediaContributions = rowData[9];
+  var organizerName = rowData[10];
+
+  var calendarId = "96b811e2490501358ff8b29e06f7abba203d2c28822a58d209e2feeddd9ff73e@group.calendar.google.com"; // Replace with your org’s calendar ID
+
+
+  var dateString = Utilities.formatDate(rawDate, Session.getScriptTimeZone(), 'EEEE, MMM dd');
+  var startTimeString = Utilities.formatDate(rawStartTime, Session.getScriptTimeZone(), 'hh:mm a');
+  var endTimeString = Utilities.formatDate(rawEndTime, Session.getScriptTimeZone(), 'hh:mm a');
+  
+  var startTime = new Date(rawDate);
+  startTime.setHours(rawStartTime.getHours(), rawStartTime.getMinutes(), 0);
+
+  var endTime = new Date(rawDate);
+  endTime.setHours(rawEndTime.getHours(), rawEndTime.getMinutes(), 0);
+  
+
+  var calendar = CalendarApp.getCalendarById(calendarId);
+  
+
+
+  // Create the event
+  var event = calendar.createEvent(eventTitle, startTime, endTime, {location: location, description: description});
+
+  // Send confirmation email
+  sendConfirmationEmail(organizerEmail, eventTitle, dateString, startTimeString, endTimeString, location, description, organizerName);
+
+  // Send Media an email
+  //sendMediaRequestEmail(mediaRequest, eventTitle, dateString, startTimeString, endTimeString, location, description, organizerEmail, organizerName, mediaContributions);
+  
+}
+
+
+// Function to send confirmation email
+function sendConfirmationEmail(organizerEmail, eventTitle, date, startTime, endTime, location, description, organizerName) {
+  var recipientList = ["cketchum@stanford.edu"]; // Recipient list
+  recipientList.push(organizerEmail);
+
+  
+
+  var subject = "SAIO Event Confirmation: " + eventTitle;
+  var body = "Your event has been successfully scheduled!\n\n" +
+             "🌟 Organized by: " + organizerName + "\n\n" +
+             "🎉 Event: " + eventTitle + "\n\n" +
+             "📅 Date: " + date + "\n\n" +
+             "🕒 Time: " + startTime + " - " + endTime + "\n\n" +
+             "📍 Location: " + location + "\n\n" +
+             "📝 Description: " + description + "\n\n" +
+             "This event has been added to the SAIO calendar! \nThanks for all your hard work! \nChaz, Julia, Caleb";
+
+  MailApp.sendEmail({
+    to: recipientList.join(","),
+    subject: subject,
+    body: body
+  });
+}
+
+
+// Alerts Media of a service request
+function sendMediaRequestEmail(mediaRequest, eventTitle, dateString, startTime, endTime, location, eventDescription, organizerEmail, organizerName, mediaContributions) {
+    if (mediaRequest.toLowerCase() !== "yes") {
+        Logger.log("Media request not needed. No email sent.");
+        return;
+    }
+
+    var mediaRecipients = ["tlt3011@stanford.edu", "ashantin@stanford.edu"]; // Media committee emails
+
+    var subject = "📸 Media Request for Event: " + eventTitle;
+    var body = "A request has been made for Media Committee services for the following event:\n\n" +
+               "📅 Date: " + dateString + "\n\n" +
+               "🕒 Time: " + startTime + " - " + endTime + "\n\n" +
+               "📍 Location: " + location + "\n\n" +
+               "📝 Requested: " + eventDescription + "\n\n" +
+               "🎤 Requested: " + mediaContributions + "\n\n" +
+               "🌟 Requested by: " + organizerName + " - " + organizerEmail + "\n\n" +
+               "Please coordinate accordingly! Ahxéhee for all your hard work! 🚀";
+
+    MailApp.sendEmail({
+        to: mediaRecipients.join(","),
+        subject: subject,
+        body: body
+    });
+
+    Logger.log("Media request email sent successfully.");
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// Function to send conflict warning email
+function sendConflictEmail(organizerEmail, eventTitle, startTime, endTime) {
+  var subject = "⚠️ Conflict Detected for Your Event: " + eventTitle;
+  var body = "Your event conflicts with another scheduled event.\n\n" +
+             "📅 Event: " + eventTitle + "\n" +
+             "🕒 Time: " + startTime + " - " + endTime + "\n\n" +
+             "Please check the calendar and adjust accordingly.";
+
+  MailApp.sendEmail({
+    to: organizerEmail,
+    subject: subject,
+    body: body
+  });
+}
